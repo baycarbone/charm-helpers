@@ -2544,6 +2544,9 @@ class OVSDPDKDeviceContext(OSContextGenerator):
                 cpu_min_max = cpu_range.split('-')
                 cores += range(int(cpu_min_max[0]),
                                int(cpu_min_max[1]) + 1)
+            elif "^" in cpu_range:
+                cpu_rm = cpu_range.split('^')
+                cores.remove(int(cpu_rm[1]))
             else:
                 cores.append(int(cpu_range))
         return cores
@@ -2576,6 +2579,23 @@ class OVSDPDKDeviceContext(OSContextGenerator):
             for core in cores[:num_cores]:
                 mask = mask | 1 << core
         return format(mask, '#04x')
+
+    @classmethod
+    def pmd_cpu_mask(cls):
+        """Get hex formatted pmd CPU mask
+
+        The mask is based on config:pmd-cpu-set.
+        :returns: hex formatted CPU mask
+        :rtype: str
+        """
+        if config('pmd-cpu-set'):
+            mask = 0
+            cpu_list = cls._parse_cpu_list(config('pmd-cpu-set'))
+            for core in cpu_list:
+                mask = mask | 1 << core
+            return format(mask, '#x')
+        else:
+            return None
 
     def socket_memory(self):
         """Formatted list of socket memory configuration per NUMA node
@@ -2646,6 +2666,7 @@ class OVSDPDKDeviceContext(OSContextGenerator):
             ctxt['device_whitelist'] = self.device_whitelist()
             ctxt['socket_memory'] = self.socket_memory()
             ctxt['cpu_mask'] = self.cpu_mask()
+            ctxt['pmd_cpu_mask'] = self.pmd_cpu_mask()
         return ctxt
 
 
