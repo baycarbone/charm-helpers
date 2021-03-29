@@ -2538,14 +2538,18 @@ class OVSDPDKDeviceContext(OSContextGenerator):
         :rtype: List[int]
         """
         cores = []
-        ranges = cpulist.split(',')
-        for cpu_range in ranges:
-            if "-" in cpu_range:
-                cpu_min_max = cpu_range.split('-')
-                cores += range(int(cpu_min_max[0]),
-                               int(cpu_min_max[1]) + 1)
-            else:
-                cores.append(int(cpu_range))
+        if re.match(r"^[0-9,\-^]*$", cpulist):
+            ranges = cpulist.split(',')
+            for cpu_range in ranges:
+                if "-" in cpu_range:
+                    cpu_min_max = cpu_range.split('-')
+                    cores += range(int(cpu_min_max[0]),
+                                   int(cpu_min_max[1]) + 1)
+                elif "^" in cpu_range:
+                    cpu_rm = cpu_range.split('^')
+                    cores.remove(int(cpu_rm[1]))
+                else:
+                    cores.append(int(cpu_range))
         return cores
 
     def _numa_node_cores(self):
@@ -2576,6 +2580,22 @@ class OVSDPDKDeviceContext(OSContextGenerator):
             for core in cores[:num_cores]:
                 mask = mask | 1 << core
         return format(mask, '#04x')
+
+    def pmd_cpu_mask(self):
+        """Get hex formatted pmd CPU mask
+
+        The mask is based on config:pmd-cpu-set.
+        :returns: hex formatted CPU mask
+        :rtype: str
+        """
+        mask = int(self.cpu_mask(), 16) << 1
+        if config('pmd-cpu-set'):
+            cpu_list = self._parse_cpu_list(config('pmd-cpu-set'))
+            if cpu_list:
+                mask = 0
+                for core in cpu_list:
+                    mask = mask | 1 << core
+        return format(mask, '#x')
 
     def socket_memory(self):
         """Formatted list of socket memory configuration per NUMA node
@@ -2646,6 +2666,7 @@ class OVSDPDKDeviceContext(OSContextGenerator):
             ctxt['device_whitelist'] = self.device_whitelist()
             ctxt['socket_memory'] = self.socket_memory()
             ctxt['cpu_mask'] = self.cpu_mask()
+            ctxt['pmd_cpu_mask'] = self.pmd_cpu_mask()
         return ctxt
 
 
