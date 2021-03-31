@@ -2538,17 +2538,18 @@ class OVSDPDKDeviceContext(OSContextGenerator):
         :rtype: List[int]
         """
         cores = []
-        ranges = cpulist.split(',')
-        for cpu_range in ranges:
-            if "-" in cpu_range:
-                cpu_min_max = cpu_range.split('-')
-                cores += range(int(cpu_min_max[0]),
-                               int(cpu_min_max[1]) + 1)
-            elif "^" in cpu_range:
-                cpu_rm = cpu_range.split('^')
-                cores.remove(int(cpu_rm[1]))
-            else:
-                cores.append(int(cpu_range))
+        if re.match(r"^[0-9,\-^]*$", cpulist):
+            ranges = cpulist.split(',')
+            for cpu_range in ranges:
+                if "-" in cpu_range:
+                    cpu_min_max = cpu_range.split('-')
+                    cores += range(int(cpu_min_max[0]),
+                                   int(cpu_min_max[1]) + 1)
+                elif "^" in cpu_range:
+                    cpu_rm = cpu_range.split('^')
+                    cores.remove(int(cpu_rm[1]))
+                else:
+                    cores.append(int(cpu_range))
         return cores
 
     def _numa_node_cores(self):
@@ -2588,14 +2589,15 @@ class OVSDPDKDeviceContext(OSContextGenerator):
         :returns: hex formatted CPU mask
         :rtype: str
         """
+        maskstr = ''
         if config('pmd-cpu-set'):
-            mask = 0
             cpu_list = cls._parse_cpu_list(config('pmd-cpu-set'))
-            for core in cpu_list:
-                mask = mask | 1 << core
-            return format(mask, '#x')
-        else:
-            return None
+            if cpu_list:
+                mask = 0
+                for core in cpu_list:
+                    mask = mask | 1 << core
+                maskstr = format(mask, '#x')
+        return maskstr
 
     def socket_memory(self):
         """Formatted list of socket memory configuration per NUMA node
