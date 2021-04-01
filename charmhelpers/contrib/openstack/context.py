@@ -2566,6 +2566,18 @@ class OVSDPDKDeviceContext(OSContextGenerator):
                 nodes[index] = self._parse_cpu_list(cpulist.read().strip())
         return nodes
 
+    def _lowest_cpu_mask(self, num_cores=1):
+        """Get a CPU mask using the first num_cores CPUs of each NUMA node
+
+        :returns: CPU mask
+        :rtype: int
+        """
+        mask = 0
+        for cores in self._numa_node_cores().values():
+            for core in cores[:num_cores]:
+                mask = mask | 1 << core
+        return mask
+
     def cpu_mask(self):
         """Get hex formatted CPU mask
 
@@ -2575,11 +2587,7 @@ class OVSDPDKDeviceContext(OSContextGenerator):
         :rtype: str
         """
         num_cores = config('dpdk-socket-cores')
-        mask = 0
-        for cores in self._numa_node_cores().values():
-            for core in cores[:num_cores]:
-                mask = mask | 1 << core
-        return format(mask, '#04x')
+        return format(self._lowest_cpu_mask(num_cores), '#04x')
 
     def pmd_cpu_mask(self):
         """Get hex formatted pmd CPU mask
@@ -2588,7 +2596,10 @@ class OVSDPDKDeviceContext(OSContextGenerator):
         :returns: hex formatted CPU mask
         :rtype: str
         """
-        mask = int(self.cpu_mask(), 16) << 1
+        # The default mask is one CPU per NUMA node shifted by
+        # the number of dpdk-socket-cores to avoid overlap.
+        mask = self._lowest_cpu_mask() << (
+            (len(self._numa_node_cores()) * config('dpdk-socket-cores')))
         if config('pmd-cpu-set'):
             cpu_list = self._parse_cpu_list(config('pmd-cpu-set'))
             if cpu_list:

@@ -4459,8 +4459,8 @@ NUMA_CORES_SINGLE = {
 }
 
 NUMA_CORES_MULTI = {
-    '0': [0, 1, 2, 3],
-    '1': [4, 5, 6, 7]
+    '0': [0, 2, 4, 6],
+    '1': [1, 3, 5, 7]
 }
 
 
@@ -4562,44 +4562,51 @@ class TestOVSDPDKDeviceContext(tests.utils.BaseTestCase):
         self.assertEqual(self.target.cpu_mask(), '0x01')
 
         self._numa_node_cores.return_value = NUMA_CORES_MULTI
-        self.assertEqual(self.target.cpu_mask(), '0x11')
+        self.assertEqual(self.target.cpu_mask(), '0x03')
 
         self.config.side_effect = lambda x: {
             'dpdk-socket-cores': 2,
         }.get(x)
-        self.assertEqual(self.target.cpu_mask(), '0x33')
+        self.assertEqual(self.target.cpu_mask(), '0x0f')
 
     def test_pmd_cpu_mask(self):
         """Test generation of hex pmd CPU masks"""
-        self.patch_target('cpu_mask')
-        self.cpu_mask.return_value = '0x01'
+        self.patch_target('_numa_node_cores')
+        self._numa_node_cores.return_value = NUMA_CORES_SINGLE
+        self.patch_target('_lowest_cpu_mask')
+        self._lowest_cpu_mask.return_value = 1
         self.config.side_effect = lambda x: {
+            'dpdk-socket-cores': 1,
             'pmd-cpu-set': None,
         }.get(x)
         self.assertEqual(self.target.pmd_cpu_mask(), '0x2')
 
-        self.patch_target('cpu_mask')
-        self.cpu_mask.return_value = '0x11'
+        self._numa_node_cores.return_value = NUMA_CORES_MULTI
+        self._lowest_cpu_mask.return_value = 3
         self.config.side_effect = lambda x: {
+            'dpdk-socket-cores': 1,
             'pmd-cpu-set': None,
         }.get(x)
-        self.assertEqual(self.target.pmd_cpu_mask(), '0x22')
+        self.assertEqual(self.target.pmd_cpu_mask(), '0xc')
 
-        self.patch_target('cpu_mask')
-        self.cpu_mask.return_value = '0x33'
+        self._numa_node_cores.return_value = NUMA_CORES_MULTI
+        self._lowest_cpu_mask.return_value = 3
         self.config.side_effect = lambda x: {
+            'dpdk-socket-cores': 2,
             'pmd-cpu-set': None,
         }.get(x)
-        self.assertEqual(self.target.pmd_cpu_mask(), '0x66')
+        self.assertEqual(self.target.pmd_cpu_mask(), '0x30')
 
         self.config.side_effect = lambda x: {
+            'dpdk-socket-cores': 2,
             'pmd-cpu-set': TEST_CPULIST_4,
         }.get(x)
         self.assertEqual(self.target.pmd_cpu_mask(), '0xaf00df')
 
-        self.patch_target('cpu_mask')
-        self.cpu_mask.return_value = '0x01'
+        self._numa_node_cores.return_value = NUMA_CORES_SINGLE
+        self._lowest_cpu_mask.return_value = 1
         self.config.side_effect = lambda x: {
+            'dpdk-socket-cores': 1,
             'pmd-cpu-set': TEST_CPULIST_5,
         }.get(x)
         self.assertEqual(self.target.pmd_cpu_mask(), '0x2')
