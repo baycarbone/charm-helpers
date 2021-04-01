@@ -2581,23 +2581,21 @@ class OVSDPDKDeviceContext(OSContextGenerator):
                 mask = mask | 1 << core
         return format(mask, '#04x')
 
-    @classmethod
-    def pmd_cpu_mask(cls):
+    def pmd_cpu_mask(self):
         """Get hex formatted pmd CPU mask
 
         The mask is based on config:pmd-cpu-set.
         :returns: hex formatted CPU mask
         :rtype: str
         """
-        maskstr = ''
+        mask = int(self.cpu_mask(), 16) << 1
         if config('pmd-cpu-set'):
-            cpu_list = cls._parse_cpu_list(config('pmd-cpu-set'))
+            cpu_list = self._parse_cpu_list(config('pmd-cpu-set'))
             if cpu_list:
                 mask = 0
                 for core in cpu_list:
                     mask = mask | 1 << core
-                maskstr = format(mask, '#x')
-        return maskstr
+        return format(mask, '#x')
 
     def socket_memory(self):
         """Formatted list of socket memory configuration per NUMA node

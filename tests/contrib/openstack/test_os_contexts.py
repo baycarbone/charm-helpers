@@ -4571,20 +4571,38 @@ class TestOVSDPDKDeviceContext(tests.utils.BaseTestCase):
 
     def test_pmd_cpu_mask(self):
         """Test generation of hex pmd CPU masks"""
+        self.patch_target('cpu_mask')
+        self.cpu_mask.return_value = '0x01'
         self.config.side_effect = lambda x: {
             'pmd-cpu-set': None,
         }.get(x)
-        self.assertEqual(self.target.pmd_cpu_mask(), '')
+        self.assertEqual(self.target.pmd_cpu_mask(), '0x2')
+
+        self.patch_target('cpu_mask')
+        self.cpu_mask.return_value = '0x11'
+        self.config.side_effect = lambda x: {
+            'pmd-cpu-set': None,
+        }.get(x)
+        self.assertEqual(self.target.pmd_cpu_mask(), '0x22')
+
+        self.patch_target('cpu_mask')
+        self.cpu_mask.return_value = '0x33'
+        self.config.side_effect = lambda x: {
+            'pmd-cpu-set': None,
+        }.get(x)
+        self.assertEqual(self.target.pmd_cpu_mask(), '0x66')
 
         self.config.side_effect = lambda x: {
             'pmd-cpu-set': TEST_CPULIST_4,
         }.get(x)
         self.assertEqual(self.target.pmd_cpu_mask(), '0xaf00df')
 
+        self.patch_target('cpu_mask')
+        self.cpu_mask.return_value = '0x01'
         self.config.side_effect = lambda x: {
             'pmd-cpu-set': TEST_CPULIST_5,
         }.get(x)
-        self.assertEqual(self.target.pmd_cpu_mask(), '')
+        self.assertEqual(self.target.pmd_cpu_mask(), '0x2')
 
     def test_context_no_devices(self):
         """Ensure that DPDK is disable when no devices detected"""
@@ -4617,7 +4635,7 @@ class TestOVSDPDKDeviceContext(tests.utils.BaseTestCase):
             'device_whitelist': '-w 0000:00:1c.0 -w 0000:00:1d.0',
             'dpdk_enabled': True,
             'socket_memory': '1024',
-            'pmd_cpu_mask': ''
+            'pmd_cpu_mask': '0x2'
         })
         self.config.side_effect = lambda x: {
             'dpdk-socket-cores': 1,
@@ -4643,7 +4661,7 @@ class TestOVSDPDKDeviceContext(tests.utils.BaseTestCase):
             'device_whitelist': '-w 0000:00:1c.0 -w 0000:00:1d.0',
             'dpdk_enabled': True,
             'socket_memory': '1024',
-            'pmd_cpu_mask': ''
+            'pmd_cpu_mask': '0x2'
         })
 
 
